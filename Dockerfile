@@ -1,14 +1,29 @@
-FROM node:11-alpine
+FROM node:18-alpine
 
-RUN mkdir -p /usr/src/app
+# Installer netcat pour les tests de connectivité
+RUN apk add --no-cache netcat-openbsd
 
+# Créer le répertoire de travail
 WORKDIR /usr/src/app
 
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer toutes les dépendances (dev incluses pour TypeScript)
+RUN npm install
+
+# Copier le code source
 COPY . .
 
-RUN yarn install
+# Compiler TypeScript
+RUN npm run tsc
 
-
+# Exposer le port
 EXPOSE 3000
-CMD ["yarn", "migration:start"]
-CMD ["yarn", "start"]
+
+# Créer un script de démarrage
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Démarrer l'application
+ENTRYPOINT ["docker-entrypoint.sh"]

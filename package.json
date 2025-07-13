@@ -52,6 +52,6 @@
       "schema:sync": "ts-node ./node_modules/typeorm/cli.js schema:sync",
       "migration:run": "ts-node ./node_modules/typeorm/cli.js migration:run",
       "test": "jest --maxWorkers=1 --verbose=true",
-      "migration:start": "yarn schema:drop && yarn schema:sync && yarn migration:run"
+      "migration:start": "npm run schema:drop && npm run schema:sync && npm run migration:run"
    }
 }

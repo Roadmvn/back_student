@@ -1,0 +1,54 @@
+# Stage 1: Build stage - Compile TypeScript
+FROM node:18-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer TOUTES les dépendances (dev incluses pour TypeScript)
+RUN npm ci --only=production=false
+
+# Copier le code source
+COPY . .
+
+# Compiler TypeScript vers JavaScript
+RUN npm run tsc
+
+# Stage 2: Production stage - Image finale légère
+FROM node:18-alpine AS production
+
+# Installer netcat pour les tests de connectivité (nécessaire pour docker-entrypoint.sh)
+RUN apk add --no-cache netcat-openbsd
+
+# Créer un utilisateur non-root pour la sécurité
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodeuser -u 1001
+
+WORKDIR /usr/src/app
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer UNIQUEMENT les dépendances de production (pas les devDependencies)
+RUN npm ci --only=production && npm cache clean --force
+
+# Copier le code compilé depuis le stage builder
+COPY --from=builder /usr/src/app/build ./build
+
+# Copier les fichiers nécessaires au runtime
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Changer le propriétaire des fichiers vers l'utilisateur non-root
+RUN chown -R nodeuser:nodejs /usr/src/app
+USER nodeuser
+
+# Exposer le port
+EXPOSE 3000
+
+# Variables d'environnement pour la production
+ENV NODE_ENV=production
+
+# Démarrer l'application
+ENTRYPOINT ["docker-entrypoint.sh"] 
